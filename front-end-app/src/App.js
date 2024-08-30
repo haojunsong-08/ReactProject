@@ -1,19 +1,22 @@
-import React, { useState } from 'react'; // No need for useEffect anymore
+import React, { useState, useEffect } from 'react'; // Importing React hooks
+import { getAll, post, put, deleteById } from './restdb.js'; // Importing functions to interact with the backend
 import './App.css'; // Importing the CSS styles for the App component
 import { CustomerList } from './CustomerList.js'; // Importing the CustomerList component
 import { CustomerAddUpdateForm } from './CustomerAddUpdateForm.js'; // Importing the CustomerAddUpdateForm component
 
 export function App() {
   let blankCustomer = { "id": -1, "name": "", "email": "", "password": "" }; // Default empty customer object
-  const [customers, setCustomers] = useState([
-    { id: 1, name: 'Jack Jackson', email: 'jackj@abc.com', password: 'jackj' },
-    { id: 2, name: 'Katie Kates', email: 'katiek@abc.com', password: 'katiek' },
-    { id: 3, name: 'Glen Glenns', email: 'gleng@abc.com', password: 'gleng' }
-  ]); // State for the list of customers initialized with a static array
+  const [customers, setCustomers] = useState([]); // State for the list of customers
   const [formObject, setFormObject] = useState(blankCustomer); // State for the form input object
   let mode = (formObject.id >= 0) ? 'Update' : 'Add'; // Determine whether the form is in 'Add' or 'Update' mode
 
-  // Fetching customers from an API is no longer needed
+  useEffect(() => {
+    getCustomers(); // Fetch customers on component mount and when formObject changes
+  }, [formObject]);
+
+  const getCustomers = function () {
+    getAll(setCustomers); // Fetch all customers from the server and update the state
+  }
 
   const handleListClick = function (item) {
     if (formObject.id === item.id) {
@@ -26,7 +29,7 @@ export function App() {
   const handleInputChange = function (event) {
     const name = event.target.name;
     const value = event.target.value;
-    let newFormObject = { ...formObject }
+    let newFormObject = { ...formObject };
     newFormObject[name] = value; // Update the form object with new input values
     setFormObject(newFormObject); // Set the updated form object in state
   }
@@ -36,25 +39,22 @@ export function App() {
   }
 
   let onDeleteClick = function () {
+    let postopCallback = () => { setFormObject(blankCustomer); }
     if (formObject.id >= 0) {
-      setCustomers(customers.filter(customer => customer.id !== formObject.id)); // Remove the customer from the list
-      setFormObject(blankCustomer); // Reset the form
+      deleteById(formObject.id, postopCallback); // Delete the customer if one is selected
+    } else {
+      setFormObject(blankCustomer); // Otherwise, just reset the form
     }
   }
 
   let onSaveClick = function () {
+    let postopCallback = () => { setFormObject(blankCustomer); }
     if (mode === 'Add') {
-      // Add a new customer with a unique id
-      const newCustomer = { ...formObject, id: customers.length + 1 };
-      setCustomers([...customers, newCustomer]);
+      post(formObject, postopCallback); // Add a new customer
     }
     if (mode === 'Update') {
-      // Update the existing customer
-      setCustomers(customers.map(customer => 
-        customer.id === formObject.id ? formObject : customer
-      ));
+      put(formObject, postopCallback); // Update the existing customer
     }
-    setFormObject(blankCustomer); // Reset the form after saving
   }
 
   let pvars = {
